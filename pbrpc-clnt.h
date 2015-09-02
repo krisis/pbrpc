@@ -10,28 +10,11 @@
 
 
 struct pbrpc_clnt {
-        struct bufferevent *bev;
-        struct list_head outstanding;
+        int sock;
         void *ctx;
 };
 
 typedef struct pbrpc_clnt pbrpc_clnt;
-
-
-/**
- * Rpcclnt callback
- */
-typedef int (*pbrpc_clnt_cbk) (pbrpc_clnt *clnt, ProtobufCBinaryData *res, int ret);
-
-
-/**
- * Rpc Pending call object
- */
-struct saved_req {
-        int32_t id;
-        pbrpc_clnt_cbk cbk;
-        struct list_head list;
-};
 
 
 /**
@@ -64,18 +47,6 @@ pbrpc_clnt_destroy (pbrpc_clnt *clnt);
 
 /**
  *
- * Starts the underlying libevent mainloop
- *
- * @param client object encapsulating the RPC client endpoint
- *
- * @return 0 on success, -1 otherwise
- */
-int
-pbrpc_clnt_mainloop (pbrpc_clnt *clnt);
-
-
-/**
- *
  * Calls the remote service identified by @clnt
  *
  * @param clnt - pbrpc_clnt object representing the remote server
@@ -88,10 +59,11 @@ pbrpc_clnt_mainloop (pbrpc_clnt *clnt);
  *
  * @return - 0 on success and -1 otherwise
  */
+
+/* FIXME will replace the async variant*/
 int
 pbrpc_clnt_call (pbrpc_clnt *clnt, const char *method, ProtobufCBinaryData *msg,
-              pbrpc_clnt_cbk cbk);
-
+                 ProtobufCBinaryData *rep, int *ret);
 
 Pbcodec__PbRpcResponse *
 rpc_read_rsp (const char* msg, size_t msg_len);

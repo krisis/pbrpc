@@ -3,10 +3,6 @@
 #include "../pbrpc-clnt.h"
 
 #include <inttypes.h>
-#include <event2/event.h>
-#include <event2/bufferevent.h>
-#include <event2/buffer.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -14,30 +10,6 @@
 
 
 #define DBUG(x) fprintf (stdout, "%s was called\n", # x)
-
-static void*
-mainloop (void *arg)
-{
-        pbrpc_clnt *clnt = arg;
-
-        pbrpc_clnt_mainloop (clnt);
-
-        return NULL;
-}
-
-
-int
-calc_cbk (pbrpc_clnt *clnt, ProtobufCBinaryData *msg, int ret)
-{
-        if (ret)
-                return ret;
-
-        Calc__CalcRsp *crsp = calc__calc_rsp__unpack (NULL, msg->len,
-                                                      msg->data);
-
-        printf("rsp->sum = %d\n", crsp->ret);
-        calc__calc_rsp__free_unpacked (crsp, NULL);
-}
 
 int main(int argc, char **argv)
 {
@@ -50,13 +22,6 @@ int main(int argc, char **argv)
                 return 1;
         }
 
-        pthread_t tid;
-        ret = pthread_create (&tid, NULL, mainloop, clnt);
-        if (ret) {
-                pbrpc_clnt_destroy (clnt);
-                return ret;
-        }
-
         Calc__CalcReq calc = CALC__CALC_REQ__INIT;
         calc.op = 1; calc.a = 2; calc.b = 3;
         size_t clen = calc__calc_req__get_packed_size(&calc);
@@ -67,12 +32,24 @@ int main(int argc, char **argv)
         msg.len = clen;
         msg.data = cbuf;
 
-        ret = pbrpc_clnt_call (clnt, "calculate", &msg, calc_cbk);
-        if (ret) {
-                fprintf (stderr, "RPC call failed\n");
+
+        int i;
+        for (i = 0; i < 10; i++) {
+                ProtobufCBinaryData rep;
+                ret = pbrpc_clnt_call (clnt, "calculate", &msg, &rep, &ret);
+                if (ret) {
+                        fprintf (stderr, "RPC call failed\n");
+                }
+
+                Calc__CalcRsp *crsp = calc__calc_rsp__unpack (NULL, rep.len,
+                                                              rep.data);
+
+                printf("rsp->sum = %d\n", crsp->ret);
+                calc__calc_rsp__free_unpacked (crsp, NULL);
+                free (rep.data);
+                rep.data = NULL;
         }
 
-        pthread_join (tid, NULL);
         return 0;
 }
 

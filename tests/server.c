@@ -46,9 +46,6 @@ out:
 int
 main(int argc, char **argv)
 {
-        struct event_base *base;
-        struct evconnlistener *listener;
-        struct sockaddr_in sin;
         pbrpc_svc_fn_obj tbl[] = {
                 {calculate, "calculate"},
                 NULL
@@ -65,7 +62,7 @@ main(int argc, char **argv)
                 return 1;
         }
 
-        pbrpc_svc *svc = pbrpc_svc_new ("localhost", 9876);
+        pbrpc_svc *svc = pbrpc_svc_new ("*", 9876);
         if (!svc) {
                 fprintf (stderr, "Failed to create a new pbrpc_svc object");
                 return 1;
